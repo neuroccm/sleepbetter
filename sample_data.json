@@ -1,0 +1,40 @@
+{
+  "profile": {
+    "age": 35,
+    "target": 7.0,
+    "wake_time": 6.75,
+    "notes": "Sample user data"
+  },
+  "entries": [
+    {
+      "date": "2025-11-18",
+      "hours": 7.25,
+      "bedtime": 23.5,
+      "waketime": 6.75
+    },
+    {
+      "date": "2025-11-19",
+      "hours": 6.8,
+      "bedtime": 23.95,
+      "waketime": 6.75
+    },
+    {
+      "date": "2025-11-20",
+      "hours": 7.5,
+      "bedtime": 23.25,
+      "waketime": 6.75
+    },
+    {
+      "date": "2025-11-21",
+      "hours": 5.75,
+      "bedtime": 1.0,
+      "waketime": 6.75
+    },
+    {
+      "date": "2025-11-22",
+      "hours": 8.2,
+      "bedtime": 22.55,
+      "waketime": 6.75
+    }
+  ]
+}

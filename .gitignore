@@ -1,0 +1,32 @@
+# User data
+sleep_data.json
+
+# Generated visualizations (user-generated only)
+sleep_daily.png
+sleep_trends.png
+
+# Allow documentation screenshots
+!docs/*.png
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
