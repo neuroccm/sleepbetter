@@ -740,15 +740,15 @@ def cmd_init(args):
         ('2025-12-12', 4.97, 1.5, 6.47),    # 1:30am - 6:28am
         ('2025-12-13', 6.53, 0.5, 7.03),    # 12:30am - 7:02am
         ('2025-12-14', 4.93, 1.5, 6.43),    # 1:30am - 6:26am
-        ('2025-12-15', 4.23, 2.0, 6.23),    # 2:00am - 6:14am (syncope day)
+        ('2025-12-15', 4.23, 2.0, 6.23),    # 2:00am - 6:14am (short night)
     ]
 
     data = {
         "profile": {
-            "age": 48,
+            "age": 35,
             "target": TARGET_SLEEP,
             "wake_time": DEFAULT_WAKE_TIME,
-            "notes": "Cyclist, syncope event Dec 16, 2025"
+            "notes": "Sample data for demonstration"
         },
         "entries": [
             {"date": d, "hours": h, "bedtime": b, "waketime": w}
@@ -1676,7 +1676,7 @@ def cmd_edit_profile():
         print(f"{Colors.DIM}Name unchanged.{Colors.END}")
 
     # Edit birthdate
-    print(f"\n{Colors.DIM}Enter birthdate in YYYY-MM-DD format (e.g., 1977-08-23){Colors.END}")
+    print(f"\n{Colors.DIM}Enter birthdate in YYYY-MM-DD format (e.g., 1990-01-15){Colors.END}")
     birthdate_input = input(f"Enter your birthdate (press Enter to keep '{current_birthdate}'): ").strip()
 
     if birthdate_input:
