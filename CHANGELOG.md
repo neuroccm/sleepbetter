@@ -5,6 +5,40 @@ All notable changes to SleepBetter CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-12-24
+
+### Added
+
+#### Profile & Personalization
+- **Profile customization**: Edit name and birthdate via menu option 7
+- **Automatic age calculation**: Age computed from birthdate (handles birthdays correctly)
+- **Age-based recommendations**: Dynamic sleep targets based on user's age group
+- **Personalized graph titles**: Shows user's name and age group in visualizations
+
+#### Enhanced History & Graphs
+- **7-day history option**: New "7 days (1 week)" option in history view (now 8 options total)
+- **Time-range graph filtering**: Select time range when refreshing graphs (7/15/30/45/90/120/365/All)
+- **Dynamic date headers**: Graph titles adapt to data range (same month, multi-month, cross-year)
+
+#### Display Improvements
+- **Improved time formatting**: Stats boxes now show "6H 30M" format instead of "6:30 hrs"
+- **Year boundary compatibility**: Date headers work seamlessly across 2025, 2026, and beyond
+
+### Changed
+- Menu now has 8 options (0-7) instead of 7 (0-6)
+- Graph generation prompts for time range instead of using all data
+- Stats box uses `hours_to_hm_labeled()` for clearer formatting
+
+### Technical
+- Added `calculate_age()` function for birthdate-based age calculation
+- Added `get_age_group()` for age group descriptions
+- Added `get_sleep_recommendation()` for age-appropriate targets
+- Added `hours_to_hm_labeled()` for "XH YM" formatting
+- Added `cmd_edit_profile()` for profile editing
+- Single-file architecture now ~1,950 lines
+
+---
+
 ## [1.0.0] - 2025-12-18
 
 ### Added
@@ -96,6 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+**1.1.0** - Profile personalization & enhanced time filtering (2025-12-24)
 **1.0.0** - Initial public release (2025-12-18)
 
 Author: Houman Khosravani MD PhD FRCPC

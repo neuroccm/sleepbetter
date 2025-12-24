@@ -22,6 +22,9 @@ SleepBetter is a personal sleep debt tracker designed to help users understand t
 - **Recovery Planning**: Multi-week recovery schedules with realistic targets
 - **Interactive Mode**: Unified dashboard with menu-driven interface
 - **Missing Data Detection**: Identifies and helps fill gaps in sleep logs
+- **Profile Customization**: Set name, birthdate with automatic age calculation
+- **Time-Range Filtering**: View history and graphs for 7/15/30/45/90/120/365 days
+- **Dynamic Date Headers**: Graph titles adapt to data range (same month, multi-month, cross-year)
 
 ## Screenshots
 
@@ -131,9 +134,10 @@ When running in interactive mode, you'll see:
   1  Log sleep
   2  View recommendations
   3  View recovery plan
-  4  Refresh graphs
+  4  Refresh graphs (select time range)
   5  View full status
-  6  View history (15/30/90/365 days)
+  6  View history (7/15/30/90/365 days)
+  7  Edit profile (name, birthdate)
   q  Quit
 ────────────────────────────────────────────────────────────
 ```
@@ -213,6 +217,8 @@ Sleep data is stored in `sleep_data.json` in the same directory as the script:
 ```json
 {
   "profile": {
+    "name": "Your Name",
+    "birthdate": "1990-01-15",
     "age": 35,
     "target": 7.0,
     "wake_time": 6.75,
@@ -228,6 +234,13 @@ Sleep data is stored in `sleep_data.json` in the same directory as the script:
   ]
 }
 ```
+
+**Profile fields:**
+- `name`: Your name (displayed in graph titles)
+- `birthdate`: Your birthdate in YYYY-MM-DD format (age calculated automatically)
+- `age`: Calculated from birthdate, or manually set
+- `target`: Target sleep hours per night
+- `wake_time`: Typical wake time in decimal hours (6.75 = 6:45 AM)
 
 **Time format:** Decimal hours from midnight (23.5 = 11:30 PM, 6.75 = 6:45 AM)
 
@@ -249,7 +262,7 @@ DEFAULT_WAKE_TIME = 6.75        # Default wake time (6:45 AM)
 View detailed analysis over different time periods:
 ```bash
 # In interactive mode, select option 6
-# Choose from: 15, 30, 45, 90, 120, 365 days, or all data
+# Choose from: 7, 15, 30, 45, 90, 120, 365 days, or all data
 ```
 
 Provides:

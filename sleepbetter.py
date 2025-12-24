@@ -11,6 +11,9 @@ Features:
 - Generate graphical reports (auto-displayed)
 - Personalized bedtime recommendations
 - Plan recovery schedule based on sleep science
+- Age-based sleep recommendations
+- Profile customization (name, birthdate)
+- Time-range filtering for history and graphs
 
 Author: Houman Khosravani MD PhD FRCPC
 License: MIT
@@ -48,7 +51,7 @@ def load_data():
     if DATA_FILE.exists():
         with open(DATA_FILE, 'r') as f:
             return json.load(f)
-    return {"entries": [], "profile": {"age": 35, "target": TARGET_SLEEP, "wake_time": DEFAULT_WAKE_TIME}}
+    return {"entries": [], "profile": {"age": 48, "target": TARGET_SLEEP, "wake_time": DEFAULT_WAKE_TIME}}
 
 def save_data(data):
     """Save sleep data to JSON file."""
@@ -60,6 +63,12 @@ def hours_to_hm(hours):
     h = int(hours)
     m = int((hours - h) * 60)
     return f"{h}:{m:02d}"
+
+def hours_to_hm_labeled(hours):
+    """Convert decimal hours to XH YM format with labels."""
+    h = int(hours)
+    m = int((hours - h) * 60)
+    return f"{h}H {m:02d}M"
 
 def hm_to_hours(hm_str):
     """Convert h:mm or decimal string to decimal hours."""
@@ -81,6 +90,68 @@ def decimal_to_time(decimal):
     h = int(decimal) % 24
     m = int((decimal - int(decimal)) * 60)
     return f"{h:02d}:{m:02d}"
+
+def calculate_age(birthdate_str, reference_date=None):
+    """Calculate age from birthdate string (YYYY-MM-DD format).
+
+    Args:
+        birthdate_str: Birth date in YYYY-MM-DD format
+        reference_date: Optional reference date (defaults to today)
+
+    Returns:
+        Age in years as integer
+    """
+    if not birthdate_str:
+        return None
+
+    try:
+        birthdate = datetime.strptime(birthdate_str, '%Y-%m-%d')
+        if reference_date is None:
+            reference_date = datetime.now()
+
+        age = reference_date.year - birthdate.year
+        # Adjust if birthday hasn't occurred yet this year
+        if (reference_date.month, reference_date.day) < (birthdate.month, birthdate.day):
+            age -= 1
+
+        return age
+    except (ValueError, AttributeError):
+        return None
+
+def get_age_group(age):
+    """Return age group description for sleep recommendations."""
+    if age is None:
+        return "Adult"
+    elif age < 18:
+        return f"Age {age}"
+    elif age < 26:
+        return f"{age} (Young Adult)"
+    elif age < 45:
+        return f"{age} (Adult)"
+    elif age < 55:
+        return f"{age} (Age 45-54)"
+    elif age < 65:
+        return f"{age} (Age 55-64)"
+    else:
+        return f"{age} (Senior)"
+
+def get_sleep_recommendation(age):
+    """Return recommended sleep range based on age."""
+    if age is None or age >= 18:
+        # Adults (18-64+): 7-9 hours recommended
+        return "7-9 hrs"
+    elif age >= 14:
+        # Teens (14-17): 8-10 hours
+        return "8-10 hrs"
+    elif age >= 6:
+        # School age (6-13): 9-11 hours
+        return "9-11 hrs"
+    elif age >= 3:
+        # Preschool (3-5): 10-13 hours
+        return "10-13 hrs"
+    else:
+        # Younger children: varies widely
+        return "10-14 hrs"
 
 def get_color_for_sleep(hours):
     """Return color based on sleep duration."""
@@ -652,64 +723,44 @@ def cmd_plan(args):
     print()
 
 def cmd_init(args):
-    """Initialize with sample data."""
-    import random
-
-    # Generate sample data for the past 30 days with realistic variation
-    # This creates a demonstration dataset showing various sleep patterns
-
-    num_days = 30
-    today = datetime.now()
-    start_date = today - timedelta(days=num_days)
-
-    sample_data = []
-
-    # Seed for reproducible "random" data that demonstrates features
-    random.seed(42)
-
-    for i in range(num_days):
-        date = start_date + timedelta(days=i)
-        date_str = date.strftime('%Y-%m-%d')
-
-        # Generate realistic but varied sleep patterns
-        # Most nights 6.5-8 hours, occasional poor nights, occasional good nights
-        roll = random.random()
-
-        if roll < 0.15:  # 15% poor sleep nights (< 6 hours)
-            hours = random.uniform(5.0, 6.0)
-            bedtime = random.uniform(0.5, 2.0)  # Late bedtime (12:30am - 2:00am)
-        elif roll < 0.25:  # 10% very good nights (8+ hours)
-            hours = random.uniform(8.0, 8.5)
-            bedtime = random.uniform(22.5, 23.0)  # Early bedtime (10:30pm - 11:00pm)
-        else:  # 75% normal variation (6.5-8 hours)
-            hours = random.uniform(6.5, 7.8)
-            bedtime = random.uniform(23.0, 0.5)  # 11:00pm - 12:30am
-
-        # Calculate wake time from bedtime and hours slept
-        waketime = bedtime + hours
-        if waketime >= 24:
-            waketime -= 24
-
-        sample_data.append((date_str, round(hours, 2), round(bedtime, 2), round(waketime, 2)))
+    """Initialize with December 2025 data."""
+    # Historical data from the PDF - with bed/wake times
+    december_data = [
+        ('2025-12-01', 4.9, 0.5, 5.4),      # 12:30am - 5:24am
+        ('2025-12-02', 7.25, 23.75, 7.0),   # 11:45pm - 7:00am
+        ('2025-12-03', 4.97, 1.0, 5.97),    # 1:00am - 5:58am
+        ('2025-12-04', 5.47, 0.5, 5.97),    # 12:30am - 5:58am
+        ('2025-12-05', 7.1, 23.5, 6.6),     # 11:30pm - 6:36am
+        ('2025-12-06', 7.18, 23.5, 6.68),   # 11:30pm - 6:41am
+        ('2025-12-07', 8.18, 23.0, 7.18),   # 11:00pm - 7:11am
+        ('2025-12-08', 6.62, 0.0, 6.62),    # 12:00am - 6:37am
+        ('2025-12-09', 6.25, 0.25, 6.5),    # 12:15am - 6:30am
+        ('2025-12-10', 6.33, 0.33, 6.66),   # 12:20am - 6:40am
+        ('2025-12-11', 7.8, 23.5, 7.3),     # 11:30pm - 7:18am
+        ('2025-12-12', 4.97, 1.5, 6.47),    # 1:30am - 6:28am
+        ('2025-12-13', 6.53, 0.5, 7.03),    # 12:30am - 7:02am
+        ('2025-12-14', 4.93, 1.5, 6.43),    # 1:30am - 6:26am
+        ('2025-12-15', 4.23, 2.0, 6.23),    # 2:00am - 6:14am (syncope day)
+    ]
 
     data = {
         "profile": {
-            "age": 35,
+            "age": 48,
             "target": TARGET_SLEEP,
             "wake_time": DEFAULT_WAKE_TIME,
-            "notes": "Sample user data"
+            "notes": "Cyclist, syncope event Dec 16, 2025"
         },
         "entries": [
             {"date": d, "hours": h, "bedtime": b, "waketime": w}
-            for d, h, b, w in sample_data
+            for d, h, b, w in december_data
         ]
     }
 
     save_data(data)
 
     debt = calculate_debt(data['entries'])
-    print(f"{Colors.GREEN}Initialized with {num_days} days of sample data{Colors.END}")
-    print(f"Total sleep debt: {Colors.RED if debt > 0 else Colors.GREEN}{hours_to_hm(abs(debt))}{Colors.END} hours")
+    print(f"{Colors.GREEN}Initialized with December 2025 data (15 nights){Colors.END}")
+    print(f"Total sleep debt: {Colors.RED}{hours_to_hm(debt)}{Colors.END} hours")
     print(f"\nRun '{Colors.CYAN}sleepbetter status{Colors.END}' to see full report")
     print(f"Run '{Colors.CYAN}sleepbetter recommend{Colors.END}' for personalized advice")
     print(f"Run '{Colors.CYAN}sleepbetter graph{Colors.END}' to generate visualizations")
@@ -734,6 +785,29 @@ def cmd_graph(args):
         return
 
     entries = sorted(entries, key=lambda x: x['date'])
+
+    # Get profile information for personalized titles
+    profile = data.get('profile', {})
+    name = profile.get('name', 'User')
+    birthdate = profile.get('birthdate')
+    age = calculate_age(birthdate) if birthdate else profile.get('age', 48)
+
+    # Create dynamic date header based on data range
+    date_objs = [datetime.strptime(e['date'], '%Y-%m-%d') for e in entries]
+    min_date = min(date_objs)
+    max_date = max(date_objs)
+
+    # Format date range for header
+    if min_date.year == max_date.year:
+        if min_date.month == max_date.month:
+            # Same month and year: "December 2025"
+            date_header = max_date.strftime('%B %Y')
+        else:
+            # Different months, same year: "November-December 2025"
+            date_header = f"{min_date.strftime('%B')}-{max_date.strftime('%B %Y')}"
+    else:
+        # Different years: "Dec 2025 - Jan 2026"
+        date_header = f"{min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
 
     # Output directory
     output_dir = Path(__file__).parent
@@ -782,7 +856,10 @@ def cmd_graph(args):
     ax1.axhspan(7.0, 9.0, alpha=0.1, color='#4ade80', label='Recommended range (7.0-9.0h)')
 
     ax1.set_ylabel('Sleep Duration (hours)', fontsize=12, color='white')
-    ax1.set_title('Sleep Analysis & Tracking', fontsize=16, fontweight='bold', color='white', pad=20)
+    # Set title with personalized name, age, and dynamic date
+    age_group = get_age_group(age)
+    title = f'Sleep Analysis: {name}, {age_group}\n{date_header}'
+    ax1.set_title(title, fontsize=16, fontweight='bold', color='white', pad=20)
 
     ax1.set_ylim(0, 10)
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
@@ -798,10 +875,11 @@ def cmd_graph(args):
     nights_below_6 = sum(1 for h in hours if h < 6)
     nights_below_5 = sum(1 for h in hours if h < 5)
 
+    sleep_rec = get_sleep_recommendation(age)
     stats_text = f"""SLEEP STATISTICS
-Average: {hours_to_hm(avg_sleep)} hrs/night
-Target: 7-9 hrs (age 45-54)
-Total Debt: {hours_to_hm(debt)} hrs
+Average: {hours_to_hm_labeled(avg_sleep)}/night
+Target: {sleep_rec}
+Total Debt: {hours_to_hm_labeled(debt)}
 
 Nights < 7h: {nights_below_7}/{len(entries)} ({100*nights_below_7//len(entries)}%)
 Nights < 6h: {nights_below_6}/{len(entries)} ({100*nights_below_6//len(entries)}%)
@@ -1029,13 +1107,14 @@ def cmd_history():
     print(f"{Colors.DIM}Select a time range to analyze:{Colors.END}\n")
 
     ranges = [
-        ('1', 15, '15 days'),
-        ('2', 30, '30 days'),
-        ('3', 45, '45 days'),
-        ('4', 90, '90 days (3 months)'),
-        ('5', 120, '120 days (4 months)'),
-        ('6', 365, '365 days (1 year)'),
-        ('7', None, 'All data'),
+        ('1', 7, '7 days (1 week)'),
+        ('2', 15, '15 days'),
+        ('3', 30, '30 days'),
+        ('4', 45, '45 days'),
+        ('5', 90, '90 days (3 months)'),
+        ('6', 120, '120 days (4 months)'),
+        ('7', 365, '365 days (1 year)'),
+        ('8', None, 'All data'),
     ]
 
     for key, days, label in ranges:
@@ -1072,6 +1151,12 @@ def cmd_history():
     if not filtered:
         print(f"\n{Colors.YELLOW}No data available for the last {label}.{Colors.END}")
         return
+
+    # Save this preference for graph generation
+    if 'profile' not in data:
+        data['profile'] = {}
+    data['profile']['last_history_days'] = days_back
+    save_data(data)
 
     # Calculate statistics for this range
     total_hours = sum(e['hours'] for e in filtered)
@@ -1293,8 +1378,13 @@ def cmd_interactive_log():
     print(f"  Total sleep debt: {Colors.RED if debt > 0 else Colors.GREEN}{hours_to_hm(abs(debt))}{Colors.END} hours")
 
 
-def generate_graphs_silent():
-    """Generate graphs without printing, return paths."""
+def generate_graphs_silent(days_back=None, range_label=None):
+    """Generate graphs without printing, return paths.
+
+    Args:
+        days_back: Number of days to filter (None = all data)
+        range_label: Label for the time range (e.g., "7 days", "All data")
+    """
     try:
         import matplotlib.pyplot as plt
         import matplotlib.dates as mdates
@@ -1310,7 +1400,39 @@ def generate_graphs_silent():
         return None, None
 
     entries = sorted(entries, key=lambda x: x['date'])
+
+    # Filter entries by date range if specified
+    if days_back is not None:
+        today = datetime.now()
+        cutoff = today - timedelta(days=days_back)
+        entries = [e for e in entries if datetime.strptime(e['date'], '%Y-%m-%d') >= cutoff]
+
+    if not entries:
+        return None, None
     output_dir = Path(__file__).parent
+
+    # Get profile information for personalized titles
+    profile = data.get('profile', {})
+    name = profile.get('name', 'User')
+    birthdate = profile.get('birthdate')
+    age = calculate_age(birthdate) if birthdate else profile.get('age', 48)
+
+    # Create dynamic date header based on data range
+    date_objs = [datetime.strptime(e['date'], '%Y-%m-%d') for e in entries]
+    min_date = min(date_objs)
+    max_date = max(date_objs)
+
+    # Format date range for header
+    if min_date.year == max_date.year:
+        if min_date.month == max_date.month:
+            # Same month and year: "December 2025"
+            date_header = max_date.strftime('%B %Y')
+        else:
+            # Different months, same year: "November-December 2025"
+            date_header = f"{min_date.strftime('%B')}-{max_date.strftime('%B %Y')}"
+    else:
+        # Different years: "Dec 2025 - Jan 2026"
+        date_header = f"{min_date.strftime('%b %Y')} - {max_date.strftime('%b %Y')}"
 
     plt.style.use('dark_background')
 
@@ -1367,7 +1489,14 @@ def generate_graphs_silent():
     ax1.axhspan(7.0, 9.0, alpha=0.1, color='#4ade80', label='Recommended range (7.0-9.0h)')
 
     ax1.set_ylabel('Sleep Duration (hours)', fontsize=12, color='white')
-    ax1.set_title('Sleep Analysis & Tracking', fontsize=16, fontweight='bold', color='white', pad=20)
+    # Set title with personalized name, age, and dynamic date
+    age_group = get_age_group(age)
+    if range_label:
+        # When filtering by range, show the range label instead of date header
+        title = f'Sleep Analysis: {name}, {age_group}\n{range_label.title()}'
+    else:
+        title = f'Sleep Analysis: {name}, {age_group}\n{date_header}'
+    ax1.set_title(title, fontsize=16, fontweight='bold', color='white', pad=20)
     ax1.set_ylim(0, 10)
     ax1.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
     ax1.xaxis.set_major_locator(mdates.DayLocator())
@@ -1380,10 +1509,11 @@ def generate_graphs_silent():
     nights_below_6 = sum(1 for h in hours if h < 6)
     nights_below_5 = sum(1 for h in hours if h < 5)
 
+    sleep_rec = get_sleep_recommendation(age)
     stats_text = f"""SLEEP STATISTICS
-Average: {hours_to_hm(avg_sleep)} hrs/night
-Target: 7-9 hrs (age 45-54)
-Total Debt: {hours_to_hm(debt)} hrs
+Average: {hours_to_hm_labeled(avg_sleep)}/night
+Target: {sleep_rec}
+Total Debt: {hours_to_hm_labeled(debt)}
 
 Nights < 7h: {nights_below_7}/{len(entries)} ({100*nights_below_7//len(entries)}%)
 Nights < 6h: {nights_below_6}/{len(entries)} ({100*nights_below_6//len(entries)}%)
@@ -1449,7 +1579,11 @@ Nights < 5h: {nights_below_5}/{len(entries)} ({100*nights_below_5//len(entries)}
     ax_top.set_xlim(-0.5, 9)
     ax_top.set_ylim(-0.5, 6)
     ax_top.axis('off')
-    ax_top.set_title('Trends', fontsize=24, fontweight='bold', color='white', loc='left', pad=20)
+    # Set title with time range if specified
+    trends_title = 'Trends'
+    if range_label:
+        trends_title = f'Trends - {range_label.title()}'
+    ax_top.set_title(trends_title, fontsize=24, fontweight='bold', color='white', loc='left', pad=20)
 
     entries_with_times = [e for e in entries if 'bedtime' in e and 'waketime' in e]
     if entries_with_times:
@@ -1507,6 +1641,68 @@ Nights < 5h: {nights_below_5}/{len(entries)} ({100*nights_below_5//len(entries)}
     plt.close('all')
 
     return fig1_path, fig2_path
+
+
+def cmd_edit_profile():
+    """Edit user profile information (name, birthdate)."""
+    data = load_data()
+    profile = data.get('profile', {})
+
+    print(f"\n{Colors.CYAN}{Colors.BOLD}Edit Profile{Colors.END}")
+    print(f"{Colors.BOLD}{'─'*60}{Colors.END}\n")
+
+    # Display current profile
+    current_name = profile.get('name', 'Not set')
+    current_birthdate = profile.get('birthdate', 'Not set')
+    current_age = calculate_age(current_birthdate) if current_birthdate != 'Not set' else profile.get('age', 'Unknown')
+
+    print(f"Current profile:")
+    print(f"  Name: {Colors.GREEN}{current_name}{Colors.END}")
+    print(f"  Birthdate: {Colors.GREEN}{current_birthdate}{Colors.END}")
+    if current_birthdate != 'Not set':
+        birthdate_obj = datetime.strptime(current_birthdate, '%Y-%m-%d')
+        formatted_birthdate = birthdate_obj.strftime('%B %d, %Y')
+        print(f"  Age: {Colors.GREEN}{current_age}{Colors.END} (born {formatted_birthdate})")
+    else:
+        print(f"  Age: {Colors.GREEN}{current_age}{Colors.END}")
+    print()
+
+    # Edit name
+    name_input = input(f"Enter your name (press Enter to keep '{current_name}'): ").strip()
+    if name_input:
+        profile['name'] = name_input
+        print(f"{Colors.GREEN}Name updated to: {name_input}{Colors.END}")
+    else:
+        print(f"{Colors.DIM}Name unchanged.{Colors.END}")
+
+    # Edit birthdate
+    print(f"\n{Colors.DIM}Enter birthdate in YYYY-MM-DD format (e.g., 1977-08-23){Colors.END}")
+    birthdate_input = input(f"Enter your birthdate (press Enter to keep '{current_birthdate}'): ").strip()
+
+    if birthdate_input:
+        # Validate birthdate format
+        try:
+            birthdate_obj = datetime.strptime(birthdate_input, '%Y-%m-%d')
+
+            # Sanity check: birthdate should be in the past
+            if birthdate_obj > datetime.now():
+                print(f"{Colors.YELLOW}Warning: Birthdate is in the future. Please enter a valid past date.{Colors.END}")
+            else:
+                profile['birthdate'] = birthdate_input
+                new_age = calculate_age(birthdate_input)
+                profile['age'] = new_age  # Update age field too
+                formatted = birthdate_obj.strftime('%B %d, %Y')
+                print(f"{Colors.GREEN}Birthdate updated to: {formatted} (Age: {new_age}){Colors.END}")
+        except ValueError:
+            print(f"{Colors.YELLOW}Invalid date format. Birthdate unchanged.{Colors.END}")
+    else:
+        print(f"{Colors.DIM}Birthdate unchanged.{Colors.END}")
+
+    # Save profile
+    data['profile'] = profile
+    save_data(data)
+
+    print(f"\n{Colors.GREEN}Profile saved successfully!{Colors.END}")
 
 
 def interactive_mode():
@@ -1590,7 +1786,8 @@ def interactive_mode():
         print(f"  {Colors.CYAN}3{Colors.END}  View recovery plan")
         print(f"  {Colors.CYAN}4{Colors.END}  Refresh graphs")
         print(f"  {Colors.CYAN}5{Colors.END}  View full status")
-        print(f"  {Colors.CYAN}6{Colors.END}  View history (15/30/90/365 days)")
+        print(f"  {Colors.CYAN}6{Colors.END}  View history (7/15/30/90/365 days)")
+        print(f"  {Colors.CYAN}7{Colors.END}  Edit profile (name, birthdate)")
         print(f"  {Colors.CYAN}q{Colors.END}  Quit")
         print(f"{Colors.BOLD}{'─'*60}{Colors.END}")
 
@@ -1614,21 +1811,67 @@ def interactive_mode():
                 weeks = 3
             cmd_plan(PlanArgs())
         elif choice == '4':
-            print(f"\n{Colors.CYAN}Regenerating visualizations...{Colors.END}")
-            fig1_path, fig2_path = generate_graphs_silent()
-            if fig1_path and fig2_path:
-                open_image(fig1_path)
-                open_image(fig2_path)
-                print(f"{Colors.GREEN}Charts refreshed and opened.{Colors.END}")
+            # Show time range selection submenu
+            print(f"\n{Colors.CYAN}Refresh Graphs - Select Time Range{Colors.END}\n")
+
+            ranges = [
+                ('1', 7, '7 days (1 week)'),
+                ('2', 15, '15 days'),
+                ('3', 30, '30 days'),
+                ('4', 45, '45 days'),
+                ('5', 90, '90 days (3 months)'),
+                ('6', 120, '120 days (4 months)'),
+                ('7', 365, '365 days (1 year)'),
+                ('8', None, 'All data'),
+            ]
+
+            for key, days, label in ranges:
+                print(f"  {Colors.CYAN}{key}{Colors.END}  {label}")
+
+            print(f"  {Colors.DIM}b  Back to main menu{Colors.END}")
+
+            range_choice = input(f"\n{Colors.BOLD}Select range:{Colors.END} ").strip().lower()
+
+            if range_choice == 'b':
+                continue
+
+            # Find the selected range
+            selected = None
+            for key, days, label in ranges:
+                if range_choice == key:
+                    selected = (days, label)
+                    break
+
+            if not selected:
+                print(f"{Colors.YELLOW}Invalid selection.{Colors.END}")
+                continue
+
+            days_back, label = selected
+
+            print(f"\n{Colors.CYAN}Regenerating visualizations for {label}...{Colors.END}")
+            try:
+                fig1_path, fig2_path = generate_graphs_silent(days_back=days_back, range_label=label)
+                if fig1_path and fig2_path:
+                    open_image(fig1_path)
+                    open_image(fig2_path)
+                    print(f"{Colors.GREEN}Charts refreshed and opened ({label}).{Colors.END}")
+                else:
+                    print(f"{Colors.YELLOW}Could not generate graphs. Check matplotlib installation.{Colors.END}")
+            except Exception as e:
+                print(f"{Colors.RED}Error generating graphs: {e}{Colors.END}")
+                import traceback
+                traceback.print_exc()
         elif choice == '5':
             cmd_status(None)
         elif choice == '6':
             cmd_history()
+        elif choice == '7':
+            cmd_edit_profile()
         elif choice == 'q' or choice == 'quit' or choice == 'exit':
             print(f"\n{Colors.GREEN}Sleep well! Aim for bed by 22:30 tonight.{Colors.END}\n")
             break
         else:
-            print(f"{Colors.YELLOW}Invalid option. Please enter 0-6 or q.{Colors.END}")
+            print(f"{Colors.YELLOW}Invalid option. Please enter 0-7 or q.{Colors.END}")
 
         input(f"\n{Colors.DIM}Press Enter to continue...{Colors.END}")
         print("\n" * 2)
