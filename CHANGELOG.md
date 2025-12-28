@@ -5,6 +5,28 @@ All notable changes to SleepBetter CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-12-28
+
+### Added
+
+#### Wake Time Customization
+- **Editable wake time**: Configure your daily wake time via menu option 7 (Edit Profile)
+- **Dynamic recommendations**: All bedtime recommendations now use your configured wake time
+- **Recovery plan integration**: Recovery schedules adapt to your personal wake time
+
+### Changed
+- Menu option 7 now shows "Edit profile (name, birthdate, wake time)"
+- `get_sleep_recommendations()` now accepts wake_time parameter
+- All hardcoded "6:45am" references replaced with dynamic wake time display
+- Recommendations, recovery plans, and dashboard all use profile's wake time
+
+### Technical
+- Added wake time editing to `cmd_edit_profile()` with HH:MM input validation
+- Wake time validated to reasonable range (4:00 AM - 10:00 AM)
+- Updated `cmd_recommend()`, `cmd_plan()`, and interactive mode to use profile's wake_time
+
+---
+
 ## [1.1.0] - 2025-12-24
 
 ### Added
@@ -130,6 +152,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+**1.2.0** - Wake time customization & dynamic recommendations (2025-12-28)
 **1.1.0** - Profile personalization & enhanced time filtering (2025-12-24)
 **1.0.0** - Initial public release (2025-12-18)
 

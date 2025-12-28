@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """
 SleepBetter CLI - Sleep debt tracker and recovery planner
-
-A personal sleep tracking tool that helps monitor sleep patterns, calculate sleep debt,
-and provide science-based recommendations for recovery.
+For a 48-year-old male cyclist recovering from syncope event
 
 Features:
 - Track sleep with bedtime/wake time
@@ -11,12 +9,6 @@ Features:
 - Generate graphical reports (auto-displayed)
 - Personalized bedtime recommendations
 - Plan recovery schedule based on sleep science
-- Age-based sleep recommendations
-- Profile customization (name, birthdate)
-- Time-range filtering for history and graphs
-
-Author: Houman Khosravani MD PhD FRCPC
-License: MIT
 """
 
 import argparse
@@ -228,7 +220,7 @@ def calculate_recommended_bedtime(target_sleep, wake_time=DEFAULT_WAKE_TIME, buf
         bedtime += 24  # Wrap to previous day
     return bedtime
 
-def get_sleep_recommendations(entries, current_debt):
+def get_sleep_recommendations(entries, current_debt, wake_time=DEFAULT_WAKE_TIME):
     """
     Generate personalized sleep recommendations based on sleep science.
     """
@@ -251,8 +243,8 @@ def get_sleep_recommendations(entries, current_debt):
         extra_per_night = min(current_debt / recovery_days, 1.5)  # Cap at 1.5h extra
         target_tonight = TARGET_SLEEP + extra_per_night
 
-        # Calculate ideal bedtime for 6:45am wake
-        ideal_bedtime = calculate_recommended_bedtime(target_tonight, DEFAULT_WAKE_TIME)
+        # Calculate ideal bedtime for configured wake time
+        ideal_bedtime = calculate_recommended_bedtime(target_tonight, wake_time)
 
         recommendations.append({
             'priority': 'HIGH',
@@ -265,7 +257,7 @@ def get_sleep_recommendations(entries, current_debt):
             'priority': 'HIGH',
             'category': 'Bedtime',
             'action': f'Go to bed by {decimal_to_time(ideal_bedtime)}',
-            'detail': f'For 6:45am wake with {hours_to_hm(target_tonight)} sleep (includes 15min to fall asleep)'
+            'detail': f'For {decimal_to_time(wake_time)} wake with {hours_to_hm(target_tonight)} sleep (includes 15min to fall asleep)'
         })
 
     # Consistency recommendation
@@ -487,7 +479,7 @@ def cmd_log(args):
         target_tonight = TARGET_SLEEP + extra_needed
         ideal_bedtime = calculate_recommended_bedtime(target_tonight, wake_time)
         print(f"  Target: {Colors.GREEN}{hours_to_hm(target_tonight)}{Colors.END} hours")
-        print(f"  Bedtime: {Colors.MAGENTA}{decimal_to_time(ideal_bedtime)}{Colors.END} for 6:45am wake")
+        print(f"  Bedtime: {Colors.MAGENTA}{decimal_to_time(ideal_bedtime)}{Colors.END} for {decimal_to_time(wake_time)} wake")
     else:
         print(f"  {Colors.GREEN}Maintain 7+ hours. Great job!{Colors.END}")
 
@@ -577,6 +569,7 @@ def cmd_recommend(args):
     """Show personalized sleep recommendations."""
     data = load_data()
     entries = data.get('entries', [])
+    wake_time = data.get('profile', {}).get('wake_time', DEFAULT_WAKE_TIME)
 
     if not entries:
         print(f"{Colors.YELLOW}No sleep data. Add some entries first.{Colors.END}")
@@ -591,9 +584,9 @@ def cmd_recommend(args):
 
     print(f"{Colors.BOLD}Current Status:{Colors.END}")
     print(f"  Sleep debt: {Colors.RED if debt > 0 else Colors.GREEN}{hours_to_hm(abs(debt))}{Colors.END} hours")
-    print(f"  Wake time: {Colors.BLUE}06:45{Colors.END} (configured)\n")
+    print(f"  Wake time: {Colors.BLUE}{decimal_to_time(wake_time)}{Colors.END} (configured)\n")
 
-    recommendations = get_sleep_recommendations(entries, debt)
+    recommendations = get_sleep_recommendations(entries, debt, wake_time)
 
     # Group by priority
     for priority in ['HIGH', 'MEDIUM', 'LOW']:
@@ -621,14 +614,14 @@ def cmd_recommend(args):
     if debt > 0:
         extra_needed = min(debt / 7, 1.5)
         target_tonight = TARGET_SLEEP + extra_needed
-        ideal_bedtime = calculate_recommended_bedtime(target_tonight, DEFAULT_WAKE_TIME)
+        ideal_bedtime = calculate_recommended_bedtime(target_tonight, wake_time)
 
         print(f"{Colors.BOLD}{'='*60}{Colors.END}")
         print(f"{Colors.BOLD}{Colors.GREEN}  TONIGHT'S PLAN{Colors.END}")
         print(f"{Colors.BOLD}{'='*60}{Colors.END}\n")
         print(f"  {Colors.BOLD}Target sleep:{Colors.END}  {Colors.GREEN}{hours_to_hm(target_tonight)}{Colors.END} hours")
         print(f"  {Colors.BOLD}Bedtime:{Colors.END}       {Colors.MAGENTA}{decimal_to_time(ideal_bedtime)}{Colors.END}")
-        print(f"  {Colors.BOLD}Wake time:{Colors.END}     {Colors.BLUE}06:45{Colors.END}")
+        print(f"  {Colors.BOLD}Wake time:{Colors.END}     {Colors.BLUE}{decimal_to_time(wake_time)}{Colors.END}")
         print(f"  {Colors.BOLD}Extra needed:{Colors.END}  {hours_to_hm(extra_needed)} hours beyond minimum")
 
         # Calculate days to recovery
@@ -641,6 +634,7 @@ def cmd_plan(args):
     """Show recovery plan for the next few weeks."""
     data = load_data()
     entries = data.get('entries', [])
+    wake_time = data.get('profile', {}).get('wake_time', DEFAULT_WAKE_TIME)
 
     debt = calculate_debt(entries) if entries else 0
     weeks = args.weeks or 3
@@ -655,7 +649,7 @@ def cmd_plan(args):
 
     print(f"{Colors.BOLD}Current Status:{Colors.END}")
     print(f"  Sleep debt:        {Colors.RED}{hours_to_hm(debt)}{Colors.END} hours")
-    print(f"  Wake time:         {Colors.BLUE}06:45{Colors.END} (your schedule)")
+    print(f"  Wake time:         {Colors.BLUE}{decimal_to_time(wake_time)}{Colors.END} (your schedule)")
     print(f"  Recovery period:   {weeks} weeks")
 
     # Calculate recovery schedule
@@ -665,7 +659,7 @@ def cmd_plan(args):
     actual_recovery_days = debt / daily_recovery if daily_recovery > 0 else 0
 
     # Calculate bedtime for target
-    ideal_bedtime = calculate_recommended_bedtime(daily_target, DEFAULT_WAKE_TIME)
+    ideal_bedtime = calculate_recommended_bedtime(daily_target, wake_time)
 
     print(f"\n{Colors.BOLD}Recovery Strategy:{Colors.END}")
     print(f"  Daily target:      {Colors.GREEN}{hours_to_hm(daily_target)}{Colors.END} hours/night")
@@ -685,7 +679,7 @@ def cmd_plan(args):
         week_target = daily_target
         week_recovery = min(remaining_debt, daily_recovery * 7)
         remaining_debt = max(0, remaining_debt - week_recovery)
-        week_bedtime = calculate_recommended_bedtime(week_target, DEFAULT_WAKE_TIME)
+        week_bedtime = calculate_recommended_bedtime(week_target, wake_time)
 
         debt_color = Colors.GREEN if remaining_debt == 0 else Colors.YELLOW if remaining_debt < debt/2 else Colors.RED
 
@@ -712,7 +706,7 @@ def cmd_plan(args):
 
         remaining = max(0, remaining - recovery)
         recovered = debt - remaining
-        bedtime = calculate_recommended_bedtime(target, DEFAULT_WAKE_TIME)
+        bedtime = calculate_recommended_bedtime(target, wake_time)
 
         weekend_mark = f"{Colors.CYAN}*{Colors.END}" if date.weekday() >= 5 else " "
         debt_color = Colors.GREEN if recovered >= debt else Colors.YELLOW
@@ -740,15 +734,15 @@ def cmd_init(args):
         ('2025-12-12', 4.97, 1.5, 6.47),    # 1:30am - 6:28am
         ('2025-12-13', 6.53, 0.5, 7.03),    # 12:30am - 7:02am
         ('2025-12-14', 4.93, 1.5, 6.43),    # 1:30am - 6:26am
-        ('2025-12-15', 4.23, 2.0, 6.23),    # 2:00am - 6:14am (short night)
+        ('2025-12-15', 4.23, 2.0, 6.23),    # 2:00am - 6:14am (syncope day)
     ]
 
     data = {
         "profile": {
-            "age": 35,
+            "age": 48,
             "target": TARGET_SLEEP,
             "wake_time": DEFAULT_WAKE_TIME,
-            "notes": "Sample data for demonstration"
+            "notes": "Cyclist, syncope event Dec 16, 2025"
         },
         "entries": [
             {"date": d, "hours": h, "bedtime": b, "waketime": w}
@@ -1644,7 +1638,7 @@ Nights < 5h: {nights_below_5}/{len(entries)} ({100*nights_below_5//len(entries)}
 
 
 def cmd_edit_profile():
-    """Edit user profile information (name, birthdate)."""
+    """Edit user profile information (name, birthdate, wake time)."""
     data = load_data()
     profile = data.get('profile', {})
 
@@ -1655,6 +1649,7 @@ def cmd_edit_profile():
     current_name = profile.get('name', 'Not set')
     current_birthdate = profile.get('birthdate', 'Not set')
     current_age = calculate_age(current_birthdate) if current_birthdate != 'Not set' else profile.get('age', 'Unknown')
+    current_wake_time = profile.get('wake_time', DEFAULT_WAKE_TIME)
 
     print(f"Current profile:")
     print(f"  Name: {Colors.GREEN}{current_name}{Colors.END}")
@@ -1665,6 +1660,7 @@ def cmd_edit_profile():
         print(f"  Age: {Colors.GREEN}{current_age}{Colors.END} (born {formatted_birthdate})")
     else:
         print(f"  Age: {Colors.GREEN}{current_age}{Colors.END}")
+    print(f"  Wake time: {Colors.GREEN}{decimal_to_time(current_wake_time)}{Colors.END}")
     print()
 
     # Edit name
@@ -1676,7 +1672,7 @@ def cmd_edit_profile():
         print(f"{Colors.DIM}Name unchanged.{Colors.END}")
 
     # Edit birthdate
-    print(f"\n{Colors.DIM}Enter birthdate in YYYY-MM-DD format (e.g., 1990-01-15){Colors.END}")
+    print(f"\n{Colors.DIM}Enter birthdate in YYYY-MM-DD format (e.g., 1977-08-23){Colors.END}")
     birthdate_input = input(f"Enter your birthdate (press Enter to keep '{current_birthdate}'): ").strip()
 
     if birthdate_input:
@@ -1697,6 +1693,34 @@ def cmd_edit_profile():
             print(f"{Colors.YELLOW}Invalid date format. Birthdate unchanged.{Colors.END}")
     else:
         print(f"{Colors.DIM}Birthdate unchanged.{Colors.END}")
+
+    # Edit wake time
+    print(f"\n{Colors.DIM}Enter wake time in HH:MM format (e.g., 6:45, 07:00){Colors.END}")
+    wake_input = input(f"Enter your daily wake time (press Enter to keep '{decimal_to_time(current_wake_time)}'): ").strip()
+
+    if wake_input:
+        try:
+            # Parse HH:MM format
+            if ':' in wake_input:
+                parts = wake_input.split(':')
+                hours = int(parts[0])
+                minutes = int(parts[1])
+            else:
+                hours = int(wake_input)
+                minutes = 0
+
+            # Validate range (4:00 AM to 10:00 AM is reasonable)
+            wake_decimal = hours + minutes / 60
+
+            if wake_decimal < 4.0 or wake_decimal > 10.0:
+                print(f"{Colors.YELLOW}Warning: Wake time should be between 4:00 and 10:00. Keeping current value.{Colors.END}")
+            else:
+                profile['wake_time'] = wake_decimal
+                print(f"{Colors.GREEN}Wake time updated to: {decimal_to_time(wake_decimal)}{Colors.END}")
+        except (ValueError, IndexError):
+            print(f"{Colors.YELLOW}Invalid time format. Wake time unchanged.{Colors.END}")
+    else:
+        print(f"{Colors.DIM}Wake time unchanged.{Colors.END}")
 
     # Save profile
     data['profile'] = profile
@@ -1762,9 +1786,10 @@ def interactive_mode():
 
         # Tonight's recommendation summary
         if debt > 0:
+            wake_time = data.get('profile', {}).get('wake_time', DEFAULT_WAKE_TIME)
             extra_needed = min(debt / 7, 1.5)
             target_tonight = TARGET_SLEEP + extra_needed
-            ideal_bedtime = calculate_recommended_bedtime(target_tonight, DEFAULT_WAKE_TIME)
+            ideal_bedtime = calculate_recommended_bedtime(target_tonight, wake_time)
             print(f"\n  {Colors.BOLD}Tonight:{Colors.END} Sleep {Colors.GREEN}{hours_to_hm(target_tonight)}{Colors.END} hrs → Bed by {Colors.MAGENTA}{decimal_to_time(ideal_bedtime)}{Colors.END}")
 
         # Last entry
@@ -1787,7 +1812,7 @@ def interactive_mode():
         print(f"  {Colors.CYAN}4{Colors.END}  Refresh graphs")
         print(f"  {Colors.CYAN}5{Colors.END}  View full status")
         print(f"  {Colors.CYAN}6{Colors.END}  View history (7/15/30/90/365 days)")
-        print(f"  {Colors.CYAN}7{Colors.END}  Edit profile (name, birthdate)")
+        print(f"  {Colors.CYAN}7{Colors.END}  Edit profile (name, birthdate, wake time)")
         print(f"  {Colors.CYAN}q{Colors.END}  Quit")
         print(f"{Colors.BOLD}{'─'*60}{Colors.END}")
 

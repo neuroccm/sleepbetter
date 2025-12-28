@@ -22,7 +22,8 @@ SleepBetter is a personal sleep debt tracker designed to help users understand t
 - **Recovery Planning**: Multi-week recovery schedules with realistic targets
 - **Interactive Mode**: Unified dashboard with menu-driven interface
 - **Missing Data Detection**: Identifies and helps fill gaps in sleep logs
-- **Profile Customization**: Set name, birthdate with automatic age calculation
+- **Profile Customization**: Set name, birthdate, and daily wake time with automatic age calculation
+- **Wake Time Customization**: Configure your daily wake time to get accurate bedtime recommendations
 - **Time-Range Filtering**: View history and graphs for 7/15/30/45/90/120/365 days
 - **Dynamic Date Headers**: Graph titles adapt to data range (same month, multi-month, cross-year)
 
@@ -35,6 +36,10 @@ SleepBetter is a personal sleep debt tracker designed to help users understand t
 ### Sleep Trends
 ![Sleep Trends](docs/screenshot_trends.png)
 *Day-of-week breakdown, typical sleep timing, and bedtime/wake time trends over time*
+
+### Interactive CLI
+![CLI Example](CLI_example.png)
+*Interactive command-line interface showing the main dashboard and menu options*
 
 ## Installation
 
@@ -137,7 +142,7 @@ When running in interactive mode, you'll see:
   4  Refresh graphs (select time range)
   5  View full status
   6  View history (7/15/30/90/365 days)
-  7  Edit profile (name, birthdate)
+  7  Edit profile (name, birthdate, wake time)
   q  Quit
 ────────────────────────────────────────────────────────────
 ```
@@ -240,7 +245,7 @@ Sleep data is stored in `sleep_data.json` in the same directory as the script:
 - `birthdate`: Your birthdate in YYYY-MM-DD format (age calculated automatically)
 - `age`: Calculated from birthdate, or manually set
 - `target`: Target sleep hours per night
-- `wake_time`: Typical wake time in decimal hours (6.75 = 6:45 AM)
+- `wake_time`: Your daily wake time in decimal hours (6.75 = 6:45 AM) - editable via menu option 7
 
 **Time format:** Decimal hours from midnight (23.5 = 11:30 PM, 6.75 = 6:45 AM)
 
@@ -293,7 +298,7 @@ Shows:
 3. **Use bedtime recommendations**: They account for your specific debt
 4. **Check visualizations**: Patterns are easier to see in graphs
 5. **Review weekly**: Use the history feature to track progress
-6. **Adjust wake time**: Set `DEFAULT_WAKE_TIME` to match your schedule
+6. **Set your wake time**: Use menu option 7 to configure your daily wake time for accurate recommendations
 
 ## Troubleshooting
 
