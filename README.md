@@ -26,6 +26,8 @@ SleepBetter is a personal sleep debt tracker designed to help users understand t
 - **Wake Time Customization**: Configure your daily wake time to get accurate bedtime recommendations
 - **Time-Range Filtering**: View history and graphs for 7/15/30/45/90/120/365 days
 - **Dynamic Date Headers**: Graph titles adapt to data range (same month, multi-month, cross-year)
+- **Robust Data Handling**: Graceful recovery from corrupted data files with automatic backup
+- **Input Validation**: Clear error messages for invalid time entries
 
 ## Screenshots
 
@@ -52,7 +54,7 @@ SleepBetter is a personal sleep debt tracker designed to help users understand t
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/sleepbetter.git
+git clone https://github.com/neuroccm/sleepbetter.git
 cd sleepbetter
 ```
 
@@ -99,7 +101,7 @@ python3 sleepbetter.py init
 python3 sleepbetter.py status
 
 # Log sleep for a specific date
-python3 sleepbetter.py log 2025-12-18 7:30
+python3 sleepbetter.py log 2026-01-07 7:30
 python3 sleepbetter.py log yesterday 6:45
 python3 sleepbetter.py log today 8:00
 
@@ -156,7 +158,7 @@ python3 sleepbetter.py log <date> <hours:minutes>
 
 Examples:
 ```bash
-python3 sleepbetter.py log 12-18 7:30      # December 18, 7 hours 30 minutes
+python3 sleepbetter.py log 01-07 7:30      # January 7, 7 hours 30 minutes
 python3 sleepbetter.py log yesterday 6:45   # Yesterday, 6 hours 45 minutes
 python3 sleepbetter.py log today 8:00       # Today, 8 hours
 ```
@@ -231,7 +233,7 @@ Sleep data is stored in `sleep_data.json` in the same directory as the script:
   },
   "entries": [
     {
-      "date": "2025-12-01",
+      "date": "2026-01-01",
       "hours": 7.25,
       "bedtime": 23.5,
       "waketime": 6.75
@@ -329,6 +331,15 @@ Initialize with sample data:
 ```bash
 python3 sleepbetter.py init
 ```
+
+### Corrupted data file
+
+If your `sleep_data.json` becomes corrupted, the tool will:
+1. Display an error message
+2. Automatically create a backup (`sleep_data.json.bak`)
+3. Start fresh with default settings
+
+You can manually restore from the backup if needed.
 
 ## Contributing
 
