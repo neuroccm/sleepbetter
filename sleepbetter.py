@@ -26,6 +26,18 @@ OPTIMAL_SLEEP = 8.0  # hours - optimal for recovery
 MAX_RECOVERY_PER_NIGHT = 1.5  # max extra sleep to recover debt per night
 DEFAULT_WAKE_TIME = 6.75  # 6:45 AM in decimal hours
 
+# Time range options for history and graph menus
+HISTORY_RANGES = [
+    ('1', 7, '7 days (1 week)'),
+    ('2', 15, '15 days'),
+    ('3', 30, '30 days'),
+    ('4', 45, '45 days'),
+    ('5', 90, '90 days (3 months)'),
+    ('6', 120, '120 days (4 months)'),
+    ('7', 365, '365 days (1 year)'),
+    ('8', None, 'All data'),
+]
+
 # ANSI colors for terminal output
 class Colors:
     RED = '\033[91m'
@@ -40,13 +52,35 @@ class Colors:
 
 def load_data():
     """Load sleep data from JSON file."""
+    default_data = {"entries": [], "profile": {"age": 48, "target": TARGET_SLEEP, "wake_time": DEFAULT_WAKE_TIME}}
     if DATA_FILE.exists():
-        with open(DATA_FILE, 'r') as f:
-            return json.load(f)
-    return {"entries": [], "profile": {"age": 48, "target": TARGET_SLEEP, "wake_time": DEFAULT_WAKE_TIME}}
+        try:
+            with open(DATA_FILE, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            print(f"{Colors.RED}Error: Corrupted data file. {e}{Colors.END}")
+            backup_path = DATA_FILE.with_suffix('.json.bak')
+            try:
+                import shutil
+                shutil.copy(DATA_FILE, backup_path)
+                print(f"{Colors.YELLOW}Backup saved to: {backup_path}{Colors.END}")
+            except Exception:
+                pass
+            return default_data
+    return default_data
 
 def save_data(data):
-    """Save sleep data to JSON file."""
+    """Save sleep data to JSON file.
+
+    Rounds floating point values to 2 decimal places for cleaner JSON output.
+    """
+    # Round numeric values in entries to avoid floating point bloat
+    if 'entries' in data:
+        for entry in data['entries']:
+            for key in ['hours', 'bedtime', 'waketime']:
+                if key in entry and isinstance(entry[key], float):
+                    entry[key] = round(entry[key], 2)
+
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
@@ -63,11 +97,34 @@ def hours_to_hm_labeled(hours):
     return f"{h}H {m:02d}M"
 
 def hm_to_hours(hm_str):
-    """Convert h:mm or decimal string to decimal hours."""
-    if ':' in hm_str:
-        parts = hm_str.split(':')
-        return float(parts[0]) + float(parts[1]) / 60
-    return float(hm_str)
+    """Convert h:mm or decimal string to decimal hours.
+
+    Args:
+        hm_str: Time string in h:mm format (e.g., "7:30") or decimal (e.g., "7.5")
+
+    Returns:
+        Hours as decimal float
+
+    Raises:
+        ValueError: If format is invalid or hours out of reasonable range (0-18)
+    """
+    hm_str = hm_str.strip()
+    if not hm_str:
+        raise ValueError("Empty input")
+
+    try:
+        if ':' in hm_str:
+            parts = hm_str.split(':')
+            hours = float(parts[0]) + float(parts[1]) / 60
+        else:
+            hours = float(hm_str)
+    except (ValueError, IndexError):
+        raise ValueError(f"Invalid time format: {hm_str}")
+
+    if hours < 0 or hours > 18:
+        raise ValueError(f"Hours must be between 0 and 18, got {hours}")
+
+    return hours
 
 def time_to_decimal(time_str):
     """Convert HH:MM time to decimal hours from midnight."""
@@ -82,6 +139,21 @@ def decimal_to_time(decimal):
     h = int(decimal) % 24
     m = int((decimal - int(decimal)) * 60)
     return f"{h:02d}:{m:02d}"
+
+def calculate_bedtime(hours, wake_time):
+    """Calculate bedtime from sleep hours and wake time.
+
+    Args:
+        hours: Hours of sleep
+        wake_time: Wake time in decimal hours
+
+    Returns:
+        Bedtime in decimal hours (0-24)
+    """
+    bedtime = wake_time - hours
+    if bedtime < 0:
+        bedtime += 24
+    return bedtime
 
 def calculate_age(birthdate_str, reference_date=None):
     """Calculate age from birthdate string (YYYY-MM-DD format).
@@ -430,9 +502,7 @@ def cmd_log(args):
 
     # Calculate bedtime from wake time (default 6:45am)
     wake_time = data.get('profile', {}).get('wake_time', DEFAULT_WAKE_TIME)
-    bedtime = wake_time - hours
-    if bedtime < 0:
-        bedtime += 24
+    bedtime = calculate_bedtime(hours, wake_time)
 
     # Build entry
     entry = {
@@ -1100,18 +1170,7 @@ def cmd_history():
     print(f"\n{Colors.BOLD}{Colors.CYAN}View Sleep History{Colors.END}")
     print(f"{Colors.DIM}Select a time range to analyze:{Colors.END}\n")
 
-    ranges = [
-        ('1', 7, '7 days (1 week)'),
-        ('2', 15, '15 days'),
-        ('3', 30, '30 days'),
-        ('4', 45, '45 days'),
-        ('5', 90, '90 days (3 months)'),
-        ('6', 120, '120 days (4 months)'),
-        ('7', 365, '365 days (1 year)'),
-        ('8', None, 'All data'),
-    ]
-
-    for key, days, label in ranges:
+    for key, days, label in HISTORY_RANGES:
         print(f"  {Colors.CYAN}{key}{Colors.END}  {label}")
 
     print(f"  {Colors.DIM}b  Back to main menu{Colors.END}")
@@ -1123,7 +1182,7 @@ def cmd_history():
 
     # Find the selected range
     selected = None
-    for key, days, label in ranges:
+    for key, days, label in HISTORY_RANGES:
         if choice == key:
             selected = (days, label)
             break
@@ -1268,14 +1327,12 @@ def cmd_catchup():
 
         try:
             hours = hm_to_hours(hours_input)
-        except:
+        except ValueError:
             print(f"    {Colors.RED}Invalid format, skipped{Colors.END}")
             continue
 
         # Calculate bedtime
-        bedtime = wake_time - hours
-        if bedtime < 0:
-            bedtime += 24
+        bedtime = calculate_bedtime(hours, wake_time)
 
         entry = {
             'date': date_str,
@@ -1316,7 +1373,7 @@ def cmd_interactive_log():
     elif date_input.lower() == 'yesterday':
         date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     elif len(date_input) == 5 and '-' in date_input:  # MM-DD format
-        date = f"2025-{date_input}"
+        date = f"{datetime.now().year}-{date_input}"
     else:
         date = date_input
 
@@ -1330,9 +1387,7 @@ def cmd_interactive_log():
 
     # Calculate bedtime from wake time
     wake_time = data.get('profile', {}).get('wake_time', DEFAULT_WAKE_TIME)
-    bedtime = wake_time - hours
-    if bedtime < 0:
-        bedtime += 24
+    bedtime = calculate_bedtime(hours, wake_time)
 
     # Build and save entry
     entry = {
@@ -1839,18 +1894,7 @@ def interactive_mode():
             # Show time range selection submenu
             print(f"\n{Colors.CYAN}Refresh Graphs - Select Time Range{Colors.END}\n")
 
-            ranges = [
-                ('1', 7, '7 days (1 week)'),
-                ('2', 15, '15 days'),
-                ('3', 30, '30 days'),
-                ('4', 45, '45 days'),
-                ('5', 90, '90 days (3 months)'),
-                ('6', 120, '120 days (4 months)'),
-                ('7', 365, '365 days (1 year)'),
-                ('8', None, 'All data'),
-            ]
-
-            for key, days, label in ranges:
+            for key, days, label in HISTORY_RANGES:
                 print(f"  {Colors.CYAN}{key}{Colors.END}  {label}")
 
             print(f"  {Colors.DIM}b  Back to main menu{Colors.END}")
@@ -1862,7 +1906,7 @@ def interactive_mode():
 
             # Find the selected range
             selected = None
-            for key, days, label in ranges:
+            for key, days, label in HISTORY_RANGES:
                 if range_choice == key:
                     selected = (days, label)
                     break

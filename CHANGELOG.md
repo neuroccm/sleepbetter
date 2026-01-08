@@ -5,6 +5,28 @@ All notable changes to SleepBetter CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-07
+
+### Added
+- **`HISTORY_RANGES` constant**: Centralized time range options for DRY code
+- **`calculate_bedtime()` helper**: New function to reduce code duplication
+- **JSON error handling**: `load_data()` now handles corrupted files gracefully with automatic backup
+
+### Fixed
+- **Year bug fix**: MM-DD date input now uses current year instead of hardcoded 2025
+- **Floating point cleanup**: `save_data()` rounds values to 2 decimal places for cleaner JSON
+
+### Improved
+- **Better input validation**: `hm_to_hours()` now validates range (0-18 hours) with clear error messages
+- **Specific exception handling**: Changed bare `except` to `except ValueError` for better debugging
+
+### Technical
+- Refactored duplicate `ranges` list definitions to use shared `HISTORY_RANGES` constant
+- Extracted bedtime calculation logic into reusable `calculate_bedtime()` function
+- Added docstrings with Args/Returns/Raises documentation
+
+---
+
 ## [1.2.0] - 2025-12-28
 
 ### Added
@@ -152,6 +174,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+**1.3.0** - Code quality improvements & bug fixes (2026-01-07)
 **1.2.0** - Wake time customization & dynamic recommendations (2025-12-28)
 **1.1.0** - Profile personalization & enhanced time filtering (2025-12-24)
 **1.0.0** - Initial public release (2025-12-18)
